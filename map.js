@@ -42,62 +42,54 @@ const template = `
 <% } %>
 `
 
-    function renderListingsTemplate(listings) {
-        return ejs.render(template, {listings: listings.features});
-    }
+function renderListingsTemplate(listings) {return ejs.render(template, {listings: listings.features});}
 
-// Set these variables during migration to hhc.ooo
-    const geocoderContainerId = 'Search-Map-Form';
-    const mapContainerId = 'map';
-    const mapboxAccessToken = 'pk.eyJ1IjoiY2hvb3NlcmVhY2giLCJhIjoiY2tzMmZwaXRoMDB3czJxcDlpbTgyY2I3MiJ9.lG3fr5o7dEr-9Cj3C4dgbg';
-    const mapboxStyle = 'mapbox://styles/choosereach/ckrjazfmp4px617p0h6oyj9dd';
-    // Coordinates that cover the lower continental United States
-    const unitedStatesBounds = [-126, 18.5, -65, 50]
+const geocoderContainerId = 'Search-Map-Form';
+const mapContainerId = 'map';
+const mapboxAccessToken = 'pk.eyJ1IjoiY2hvb3NlcmVhY2giLCJhIjoiY204YzY4dmIxMXc3MTJpcHNjMmF0MDNhdSJ9.jQ-0qtFKAdsf1qWxvmjTwA';
+const mapboxStyle = 'mapbox://styles/choosereach/cm8amoube00g701so6iiehdgv';
+const unitedStatesBounds = [-126, 18.5, -65, 50] // Coordinates that cover the continental United States
 
-    mapboxgl.accessToken = mapboxAccessToken
+mapboxgl.accessToken = mapboxAccessToken
 
-    const map = new mapboxgl.Map({
-        container: mapContainerId,
-        style: mapboxStyle,
-        // Zoom to United States by default
-        bounds: unitedStatesBounds,
-        scrollZoom: true
-    });
+const map = new mapboxgl.Map({
+    container: mapContainerId,
+    style: mapboxStyle,
+    bounds: unitedStatesBounds, // Zoom to United States by default
+    scrollZoom: true
+});
 
-    function mapHHCLocationToMapboxFormat(hccLocation) {
-
-        return {
-            type: "Feature",
-            geometry: {
-                type: "Point",
-                coordinates: [
-                    hccLocation.longitude,
-                    hccLocation.latitude,
-                ]
-            },
-            "properties": {
-                'icon': 'hhc-chicken-icon-original',
-                ...hccLocation
-            }
+function mapCKLocksmithToMapboxFormat(CKLocksmith) {
+    return {
+        type: "Feature",
+        geometry: {
+            type: "Point",
+            coordinates: [
+                CKLocksmith.longitude,
+                CKLocksmith.latitude,
+            ]
+        },
+        "properties": {
+            'icon': 'map-pin-50px',
+            ...CKLocksmith
         }
     }
+}
+    
+const locksmiths = {
+    "type": "FeatureCollection",
+    "features": allLocations.map(mapCKLocksmithToMapboxFormat)
+}
 
-//
-    const stores = {
-        "type": "FeatureCollection",
-        "features": allLocations.map(mapHHCLocationToMapboxFormat)
-    }
-
-    /* Assign a unique ID to each store */
-    stores.features.forEach(function (store, i) {
-        store.properties.id = i;
-    });
+/* Assign a unique ID to each store */
+locksmiths.features.forEach(function (locksmith, i) {
+    locksmith.properties.id = i;
+});
 
     map.on('load', () => {
-
         map.addSource('stores', {
             'type': 'geojson',
-            'data': stores,
+            'data': locksmiths,
             // Group close stores under the same marker
             cluster: true,
             // Max zoom to cluster points on
@@ -105,7 +97,6 @@ const template = `
             // Radius of each cluster when clustering points
             clusterRadius: 50
         })
-
         // Create a layer to cluster close stores together
         map.addLayer({
             id: 'clusters',
@@ -116,9 +107,7 @@ const template = `
                 'icon-image': 'hhc-chicken-icon-original',
                 'icon-allow-overlap': true
             }
-
         });
-
         // Add a text field inside chicken to show how many locations are in a cluster
         map.addLayer({
             id: 'cluster-count',
@@ -138,7 +127,6 @@ const template = `
                 "text-halo-width": .5
             }
         });
-
         // Add a layer for individual stores (not clusters)
         map.addLayer({
             'id': 'unclustered_stores',
@@ -151,26 +139,21 @@ const template = `
                 'icon-allow-overlap': true
             }
         });
-
-        buildLocationList(stores);
-
-        // Open a store page when clicking on a store
+        buildLocationList(locksmiths);
+        // Open a locksmith page when clicking on a map pin
         map.on('click', 'unclustered_stores', (e) => {
             window.location.href = e.features[0].properties.link
         });
-
-        // Zoom into a cluster of stores when clicked
-        // Example cluster app here: https://docs.mapbox.com/mapbox-gl-js/example/cluster/
+        // Zoom into a cluster of stores when clicked (https://docs.mapbox.com/mapbox-gl-js/example/cluster/)
         map.on('click', 'clusters', (e) => {
             const features = map.queryRenderedFeatures(e.point, {
                 layers: ['clusters']
             });
             const clusterId = features[0].properties.cluster_id;
-            map.getSource('stores').getClusterExpansionZoom(
+            map.getSource('locksmiths').getClusterExpansionZoom(
                 clusterId,
                 (err, zoom) => {
                     if (err) return;
-
                     map.easeTo({
                         center: features[0].geometry.coordinates,
                         zoom: zoom
@@ -199,8 +182,7 @@ const template = `
         mapboxgl: mapboxgl,
         proximity: "ip",
         countries: "us",
-        // https://docs.mapbox.com/api/search/geocoding/#data-types
-        types: "country,region,postcode,district,place,locality,neighborhood"
+        types: "country,region,postcode,district,place,locality,neighborhood" // https://docs.mapbox.com/api/search/geocoding/#data-types
     })
 
     const geocoderInput = geocoder.onAdd(map);
@@ -226,34 +208,34 @@ const template = `
             const longitude = address.center[1];
 
             // Append the distance of each store from the geocoder search result so that we can filter out far away locations
-            stores.features.forEach(store => {
-                const storeLat = store.geometry.coordinates[0]
-                const storeLon = store.geometry.coordinates[1]
+            locksmiths.features.forEach(locksmith => {
+                const locksmithLat = locksmith.geometry.coordinates[0]
+                const locksmithLon = locksmith.geometry.coordinates[1]
 
-                store.distanceFromSearch = calculateDistanceBetweenTwoCoordinates(storeLat, storeLon, latitude, longitude)
+                locksmith.distanceFromSearch = calculateDistanceBetweenTwoCoordinates(locksmithLat, locksmithLon, latitude, longitude)
             })
 
             // Filter to stores that:
-            const filteredStores = stores.features.filter(store => {
+            const filteredStores = locksmiths.features.filter(locksmith => {
                 // Are within 100 miles of the geocoder search
-                return store.distanceFromSearch <= 100 ||
+                return locksmith.distanceFromSearch <= 100 ||
                     // If this is a search for a country it won't have contexts, so just show everything
                     !hasContexts ||
                     // Are within the same state
-                    contexts.includes(store.properties.state) ||
+                    contexts.includes(locksmith.properties.state) ||
                     // Are an exact state match
-                    searchText === store.properties.state
+                    searchText === locksmith.properties.state
             })
 
             // Sort stores from closest to furthest
-            const sortedStores = filteredStores.sort((store1, store2) => {
-                return store1.distanceFromSearch - store2.distanceFromSearch
+            const sortedLocksmiths = filteredLocksmiths.sort((locksmith1, locksmith2) => {
+                return locksmith1.distanceFromSearch - locksmith2.distanceFromSearch
             })
 
-            const closestStore = sortedStores[0]
+            const closestLocksmith = sortedLocksmith[0]
 
             // Resize map to fit closet store and geocoder search result location
-            if (!!closestStore) {
+            if (!!closestLocksmith) {
 
                 // const coordinates = [
                 //     // Closest Store
@@ -270,21 +252,18 @@ const template = `
             }
 
             // Resize map to fit all stores within the mile range
-            if (sortedStores.length > 0) {
-                const storeCoordinates = filteredStores.map((store) => store.geometry.coordinates);
-
-                const bounds = getBoundsOfCoordinates(storeCoordinates.concat([address.center]))
-
+            if (sortedLocksmiths.length > 0) {
+                const locksmithCoordinates = filteredLocksmiths.map((locksmith) => locksmith.geometry.coordinates);
+                const bounds = getBoundsOfCoordinates(locksmithCoordinates.concat([address.center]))
                 map.fitBounds(bounds, {
                     padding: {top: 50, bottom: 100, left: 50, right: 50} // Padding in pixels
                 });
             }
 
-
             // Rebuild the listings sorted by distance
-            buildLocationList({
+            buildLocksmithList({
                 "type": "FeatureCollection",
-                "features": sortedStores
+                "features": sortedLocksmiths
             });
         }
     })
@@ -301,7 +280,7 @@ const template = `
             if (coordinate[1] > ne[1]) {
                 ne[1] = coordinate[1];
             }
-            if (coordinate[0] < sw[0]) { //sw = south west
+            if (coordinate[0] < sw[0]) {
                 sw[0] = coordinate[0];
             }
             if (coordinate[1] < sw[1]) {
@@ -309,30 +288,21 @@ const template = `
             }
         });
 
-        // Add some padding around bound
-
         return [ne, sw]
     }
 
-
-    function buildLocationList(stores) {
+    function buildLocksmithList(locksmiths) {
 
         const emptyResultsMessage = document.querySelector("#Search-Map-Empty")
         const listings = document.getElementById('Search-Map-List');
 
-        if (stores.features.length > 0) {
-            // If more than one store is displayed
-            // Hide the empty results message if it is displayed
-            emptyResultsMessage.style.display = "none";
-
-            // Build the left side list of locations
-
+        if (locksmiths.features.length > 0) {
+            emptyResultsMessage.style.display = "none"; // Hide the empty results message
             listings.innerHTML = "";
-            listings.innerHTML = renderListingsTemplate(stores)
+            listings.innerHTML = renderListingsTemplate(locksmiths) // Build the left side list of locations
 
         } else {
-            // If there are no stores, show the empty results message and hide listings
-            emptyResultsMessage.style.display = "block";
+            emptyResultsMessage.style.display = "block"; // If there are no locksmiths, show the empty results message and hide listings
             listings.innerHTML = "";
         }
     }
