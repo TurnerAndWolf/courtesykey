@@ -1,24 +1,15 @@
 // Get list of locations from collection list on page load
-const allLocations = Array.from(
-  document.querySelectorAll("#geoList div.w-embed")
-).map((element) => JSON.parse(element.innerHTML));
+const allLocations = Array.from(document.querySelectorAll("#geoList div.w-embed")).map((element) => JSON.parse(element.innerHTML));
 
 // Find the closest location to a target location out of an array of locations
 function closestCoordinate(targetLocation, locationData) {
-  function vectorDistance(dx, dy) {
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
+  function vectorDistance(dx, dy) {return Math.sqrt(dx * dx + dy * dy);}
   function locationDistance(location1, location2) {
-    var dx = location1.latitude - location2.latitude,
-      dy = location1.longitude - location2.longitude;
-
+    var dx = location1.latitude - location2.latitude, dy = location1.longitude - location2.longitude;
     return vectorDistance(dx, dy);
   }
-
   return locationData.reduce(function (prev, curr) {
-    var prevDistance = locationDistance(targetLocation, prev),
-      currDistance = locationDistance(targetLocation, curr);
+    var prevDistance = locationDistance(targetLocation, prev), currDistance = locationDistance(targetLocation, curr);
     return prevDistance < currDistance ? prev : curr;
   });
 }
@@ -26,33 +17,19 @@ function closestCoordinate(targetLocation, locationData) {
 // Find the closest location to the user's location and execute the callback function with it
 function findClosestLocation(allLocations, callback) {
   function success(position) {
-    // Get the closest location to the user's location based on geo coordinates
     const closestLocation = closestCoordinate(position.coords, allLocations);
-    //console.log("Closest location: " + JSON.stringify(closestLocation));
     callback(closestLocation, null);
   }
 
-  function error() {
-    callback(null, true);
-    console.log("Unable to retrieve your location");
-  }
+  function error() {callback(null, true); console.log("Unable to retrieve your location");}
 
-  if (!navigator.geolocation) {
-    console.log("Geolocation is not supported by your browser");
-  } else {
-    status.textContent = "Locating…";
-    navigator.geolocation.getCurrentPosition(success, error);
-  }
+  if (!navigator.geolocation) {console.log("Geolocation is not supported by your browser");} 
+  else {status.textContent = "Locating…"; navigator.geolocation.getCurrentPosition(success, error);}
 }
 
+// Save closest location to local storage
 const closestLocationStorageKey = "reach.closestLocation";
-
-function saveClosestLocation(closestLocation) {
-  localStorage.setItem(
-    closestLocationStorageKey,
-    JSON.stringify(closestLocation)
-  );
-}
+function saveClosestLocation(closestLocation) {localStorage.setItem(closestLocationStorageKey, JSON.stringify(closestLocation));}
 
 // Grab the closest location from local storage if available
 function restoreSavedClosestLocation() {
@@ -60,10 +37,8 @@ function restoreSavedClosestLocation() {
   const maybeClosestLocation = !!stringifiedLocation
     ? JSON.parse(stringifiedLocation)
     : null;
-
   return maybeClosestLocation;
 }
-
 const maybeSavedClosestLocation = restoreSavedClosestLocation();
 
 function initStoreLocator(geoElement) {
@@ -71,8 +46,7 @@ function initStoreLocator(geoElement) {
   const myLocationLoader = geoElement.getElementsByClassName("geo__loading")[0];
   const myLocationTop = geoElement.getElementsByClassName("geo__text--top")[0];
   const refreshButton = geoElement.getElementsByClassName("geo__refresh")[0];
-  const myLocationBottom =
-    geoElement.getElementsByClassName("geo__text--bottom")[0];
+  const myLocationBottom = geoElement.getElementsByClassName("geo__text--bottom")[0];
 
   function displayClosestLocation() {
     console.log("Geo: User Location Requested", window.closestLocation);
@@ -82,7 +56,7 @@ function initStoreLocator(geoElement) {
     myLocationButton.href = window.closestLocation.link;
     myLocationButton.id = "Locksmith-Nearest-You-Button";
     myLocationTop.innerHTML = "Locksmith near you:";
-    myLocationBottom.innerHTML = window.closestLocation.name;
+    myLocationBottom.innerHTML = window.closestLocation.addressLine2;
   }
 
   // Update button details with text, link, and id of closest location.
