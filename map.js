@@ -90,36 +90,34 @@ locksmiths.features.forEach(function (locksmith, i) {
         map.addSource('stores', {
             'type': 'geojson',
             'data': locksmiths,
-            // Group close stores under the same marker
-            cluster: true,
-            // Max zoom to cluster points on
-            clusterMaxZoom: 14,
-            // Radius of each cluster when clustering points
-            clusterRadius: 50
+            cluster: true, // Group close stores under the same marker
+            clusterMaxZoom: 14, // Max zoom to cluster points on
+            clusterRadius: 50 // Radius of each cluster when clustering points
         })
+        
         // Create a layer to cluster close stores together
         map.addLayer({
             id: 'clusters',
             filter: ['has', 'point_count'],
             'type': 'symbol',
-            'source': 'stores',
+            'source': 'locksmiths',
             'layout': {
-                'icon-image': 'hhc-chicken-icon-original',
+                'icon-image': 'map-pin-50px',
                 'icon-allow-overlap': true
             }
         });
-        // Add a text field inside chicken to show how many locations are in a cluster
+        
+        // Add a text field inside map pin icon to show how many locations are in a cluster
         map.addLayer({
             id: 'cluster-count',
             type: 'symbol',
-            source: 'stores',
+            source: 'locksmiths',
             filter: ['has', 'point_count'],
             layout: {
                 'text-field': ['get', 'point_count_abbreviated'],
                 'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
                 'text-size': 16,
-                // Position text in center of cluster chicken
-                'text-offset': [-.1, .6]
+                'text-offset': [-.1, .6] // Position text in center of cluster chicken
             },
             paint: {
                 'text-color': '#FFFFFF',
@@ -127,11 +125,12 @@ locksmiths.features.forEach(function (locksmith, i) {
                 "text-halo-width": .5
             }
         });
+        
         // Add a layer for individual stores (not clusters)
         map.addLayer({
             'id': 'unclustered_stores',
             'type': 'symbol',
-            'source': 'stores',
+            'source': 'locksmiths',
             'filter': ['!', ['has', 'point_count']],
             'layout': {
                 'icon-anchor': 'bottom',
@@ -139,11 +138,13 @@ locksmiths.features.forEach(function (locksmith, i) {
                 'icon-allow-overlap': true
             }
         });
+        
         buildLocationList(locksmiths);
         // Open a locksmith page when clicking on a map pin
         map.on('click', 'unclustered_stores', (e) => {
             window.location.href = e.features[0].properties.link
         });
+        
         // Zoom into a cluster of stores when clicked (https://docs.mapbox.com/mapbox-gl-js/example/cluster/)
         map.on('click', 'clusters', (e) => {
             const features = map.queryRenderedFeatures(e.point, {
@@ -164,18 +165,10 @@ locksmiths.features.forEach(function (locksmith, i) {
     });
 
     // Change cursor while hovering over clusters or stores
-    map.on('mouseenter', 'clusters', () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'clusters', () => {
-        map.getCanvas().style.cursor = '';
-    });
-    map.on('mouseenter', 'unclustered_stores', () => {
-        map.getCanvas().style.cursor = 'pointer';
-    });
-    map.on('mouseleave', 'unclustered_stores', () => {
-        map.getCanvas().style.cursor = '';
-    });
+    map.on('mouseenter', 'clusters', () => {map.getCanvas().style.cursor = 'pointer';});
+    map.on('mouseleave', 'clusters', () => {map.getCanvas().style.cursor = '';});
+    map.on('mouseenter', 'unclustered_stores', () => {map.getCanvas().style.cursor = 'pointer';});
+    map.on('mouseleave', 'unclustered_stores', () => {map.getCanvas().style.cursor = '';});
 
     const geocoder = new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
@@ -191,7 +184,6 @@ locksmiths.features.forEach(function (locksmith, i) {
 
     // When a location is selected from the dropdown, sort the listings by distance to that location
     geocoder.on('result', function (result) {
-
         // State / Neighborhood / County / Etc
         // Example: ['Summerlin South', 'Las Vegas', 'Clark County', 'Nevada', 'United States']
         const hasContexts = !!result.result.context
@@ -199,7 +191,6 @@ locksmiths.features.forEach(function (locksmith, i) {
         // The address selected by the user
         // This could be a State like 'Texas' or a full street address
         const searchText = result.result['text_en-US']
-
         const address = result.result
 
         // If we successfully found an address from the search box
@@ -216,7 +207,7 @@ locksmiths.features.forEach(function (locksmith, i) {
             })
 
             // Filter to stores that:
-            const filteredStores = locksmiths.features.filter(locksmith => {
+            const filteredLocksmiths = locksmiths.features.filter(locksmith => {
                 // Are within 100 miles of the geocoder search
                 return locksmith.distanceFromSearch <= 100 ||
                     // If this is a search for a country it won't have contexts, so just show everything
@@ -236,28 +227,13 @@ locksmiths.features.forEach(function (locksmith, i) {
 
             // Resize map to fit closet store and geocoder search result location
             if (!!closestLocksmith) {
-
-                // const coordinates = [
-                //     // Closest Store
-                //     [sortedStores[0].geometry.coordinates[0], sortedStores[0].geometry.coordinates[1]],
-                //     // Geocoder Search Result Location
-                //     [latitude, longitude]
-                // ]
-                //
-                // const bounds = getBoundsOfCoordinates(coordinates)
-                //
-                // map.fitBounds(bounds, {
-                //     padding: {top: 50, bottom:50, left: 50, right: 50} // Padding in pixels
-                // });
             }
 
             // Resize map to fit all stores within the mile range
             if (sortedLocksmiths.length > 0) {
                 const locksmithCoordinates = filteredLocksmiths.map((locksmith) => locksmith.geometry.coordinates);
                 const bounds = getBoundsOfCoordinates(locksmithCoordinates.concat([address.center]))
-                map.fitBounds(bounds, {
-                    padding: {top: 50, bottom: 100, left: 50, right: 50} // Padding in pixels
-                });
+                map.fitBounds(bounds, {padding: {top: 50, bottom: 100, left: 50, right: 50}});
             }
 
             // Rebuild the listings sorted by distance
@@ -292,7 +268,6 @@ locksmiths.features.forEach(function (locksmith, i) {
     }
 
     function buildLocksmithList(locksmiths) {
-
         const emptyResultsMessage = document.querySelector("#Search-Map-Empty")
         const listings = document.getElementById('Search-Map-List');
 
@@ -302,7 +277,7 @@ locksmiths.features.forEach(function (locksmith, i) {
             listings.innerHTML = renderListingsTemplate(locksmiths) // Build the left side list of locations
 
         } else {
-            emptyResultsMessage.style.display = "block"; // If there are no locksmiths, show the empty results message and hide listings
+            emptyResultsMessage.style.display = "block"; // If there are no listings, show the empty results message and hide listings
             listings.innerHTML = "";
         }
     }
@@ -315,8 +290,7 @@ locksmiths.features.forEach(function (locksmith, i) {
         const lat1 = toRad(latt1);
         const lat2 = toRad(latt2);
 
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         const d = R * c;
         return d;
